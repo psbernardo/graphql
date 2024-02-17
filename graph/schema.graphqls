@@ -1,0 +1,51 @@
+# GraphQL schema example
+#
+# https://gqlgen.com/getting-started/
+
+type Vehicle {
+  name: String!
+  model: String!
+}
+
+type Film {
+  title: String!
+  episodeId: Int!
+  director: String
+  producer: String
+  releaseDate: String
+}
+
+type People {
+  name: String!
+  height: String
+  mass: String
+  hairColor: String
+  skinColor: String
+  eyeColor: String
+  birthYear: String
+  gender: String
+  films: [Film!]
+  vehicles: [Vehicle!]
+  created: String
+  edited: String
+  url: String!
+}
+
+type Query {
+  search(filter: String!): [People]!
+  getSearchHistory: [String!]!
+  getSaveResult(key: String!): [People]!
+}
+
+type Mutation {
+  saveSearchResult(input: SearchResult!): saveResultResponse!
+}
+
+input SearchResult {
+  key: String!
+  urls: [String!]!
+}
+
+type saveResultResponse {
+  message: String!
+}

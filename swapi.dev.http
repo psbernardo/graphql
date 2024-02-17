@@ -1,0 +1,16 @@
+Get https://swapi.dev/api/people/?search=D,
+
+### search
+
+Get https://swapi.dev/api/people/?search=D%2C&page=2
+
+### people
+
+Get https://swapi.dev/api/people/8/
+
+### vehicle
+Get https://swapi.dev/api/vehicles/42/
+
+
+### film
+Get https://swapi.dev/api/films/4/
