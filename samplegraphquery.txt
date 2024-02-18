@@ -1,0 +1,93 @@
+
+{
+  search(filter:"Darth Maul"){
+    count 
+		next 
+		previous
+		results{
+      name
+      height
+      mass
+      hairColor
+      skinColor
+      eyeColor
+      birthYear
+      gender
+      films{
+        title
+        episodeId
+        director
+        producer
+        releaseDate
+      }
+			vehicles{
+        name
+				model
+      }
+      created
+      edited
+      url
+    }
+    
+  }
+}
+
+/----------------- break ----------------/
+// saving  
+
+mutation SaveSearchResult($searchResult: SearchResult!){
+  saveSearchResult(input: $searchResult){
+    message
+  }
+}
+
+{
+  "searchResult": {
+    "key": "Darth"
+  }
+}
+
+
+/----------------- break ----------------/
+
+{
+  getSearchHistory
+}
+
+/----------------- break ----------------/
+
+{
+  getSaveResult(key:"Leia Organa"){
+    count 
+		next 
+		previous
+		results{
+      name
+      height
+      mass
+      hairColor
+      skinColor
+      eyeColor
+      birthYear
+      gender
+      films{
+        title
+        episodeId
+        director
+        producer
+        releaseDate
+      }
+			vehicles{
+        name
+				model
+      }
+      created
+      edited
+      url
+    }
+    
+  }
+}
+
+
+/----------------- break ----------------/

@@ -78,7 +78,15 @@ type ComplexityRoot struct {
 	Query struct {
 		GetSaveResult    func(childComplexity int, key string) int
 		GetSearchHistory func(childComplexity int) int
+		PageResult       func(childComplexity int, url string) int
 		Search           func(childComplexity int, filter string) int
+	}
+
+	QueryResult struct {
+		Count    func(childComplexity int) int
+		Next     func(childComplexity int) int
+		Previous func(childComplexity int) int
+		Results  func(childComplexity int) int
 	}
 
 	Vehicle struct {
@@ -95,9 +103,10 @@ type MutationResolver interface {
 	SaveSearchResult(ctx context.Context, input model.SearchResult) (*model.SaveResultResponse, error)
 }
 type QueryResolver interface {
-	Search(ctx context.Context, filter string) ([]*model.People, error)
+	Search(ctx context.Context, filter string) (*model.QueryResult, error)
+	PageResult(ctx context.Context, url string) (*model.QueryResult, error)
 	GetSearchHistory(ctx context.Context) ([]string, error)
-	GetSaveResult(ctx context.Context, key string) ([]*model.People, error)
+	GetSaveResult(ctx context.Context, key string) (*model.QueryResult, error)
 }
 
 type executableSchema struct {
@@ -276,6 +285,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.GetSearchHistory(childComplexity), true
 
+	case "Query.pageResult":
+		if e.complexity.Query.PageResult == nil {
+			break
+		}
+
+		args, err := ec.field_Query_pageResult_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.PageResult(childComplexity, args["url"].(string)), true
+
 	case "Query.search":
 		if e.complexity.Query.Search == nil {
 			break
@@ -287,6 +308,34 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.Search(childComplexity, args["filter"].(string)), true
+
+	case "QueryResult.count":
+		if e.complexity.QueryResult.Count == nil {
+			break
+		}
+
+		return e.complexity.QueryResult.Count(childComplexity), true
+
+	case "QueryResult.next":
+		if e.complexity.QueryResult.Next == nil {
+			break
+		}
+
+		return e.complexity.QueryResult.Next(childComplexity), true
+
+	case "QueryResult.previous":
+		if e.complexity.QueryResult.Previous == nil {
+			break
+		}
+
+		return e.complexity.QueryResult.Previous(childComplexity), true
+
+	case "QueryResult.results":
+		if e.complexity.QueryResult.Results == nil {
+			break
+		}
+
+		return e.complexity.QueryResult.Results(childComplexity), true
 
 	case "Vehicle.model":
 		if e.complexity.Vehicle.Model == nil {
@@ -476,6 +525,21 @@ func (ec *executionContext) field_Query_getSaveResult_args(ctx context.Context, 
 		}
 	}
 	args["key"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_pageResult_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["url"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("url"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["url"] = arg0
 	return args, nil
 }
 
@@ -1385,9 +1449,9 @@ func (ec *executionContext) _Query_search(ctx context.Context, field graphql.Col
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*model.People)
+	res := resTmp.(*model.QueryResult)
 	fc.Result = res
-	return ec.marshalNPeople2ᚕᚖgithubᚗcomᚋpsbernardoᚋgraphqlᚋgraphᚋmodelᚐPeople(ctx, field.Selections, res)
+	return ec.marshalNQueryResult2ᚖgithubᚗcomᚋpsbernardoᚋgraphqlᚋgraphᚋmodelᚐQueryResult(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_search(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1398,34 +1462,16 @@ func (ec *executionContext) fieldContext_Query_search(ctx context.Context, field
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "name":
-				return ec.fieldContext_People_name(ctx, field)
-			case "height":
-				return ec.fieldContext_People_height(ctx, field)
-			case "mass":
-				return ec.fieldContext_People_mass(ctx, field)
-			case "hairColor":
-				return ec.fieldContext_People_hairColor(ctx, field)
-			case "skinColor":
-				return ec.fieldContext_People_skinColor(ctx, field)
-			case "eyeColor":
-				return ec.fieldContext_People_eyeColor(ctx, field)
-			case "birthYear":
-				return ec.fieldContext_People_birthYear(ctx, field)
-			case "gender":
-				return ec.fieldContext_People_gender(ctx, field)
-			case "films":
-				return ec.fieldContext_People_films(ctx, field)
-			case "vehicles":
-				return ec.fieldContext_People_vehicles(ctx, field)
-			case "created":
-				return ec.fieldContext_People_created(ctx, field)
-			case "edited":
-				return ec.fieldContext_People_edited(ctx, field)
-			case "url":
-				return ec.fieldContext_People_url(ctx, field)
+			case "count":
+				return ec.fieldContext_QueryResult_count(ctx, field)
+			case "next":
+				return ec.fieldContext_QueryResult_next(ctx, field)
+			case "previous":
+				return ec.fieldContext_QueryResult_previous(ctx, field)
+			case "results":
+				return ec.fieldContext_QueryResult_results(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type People", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type QueryResult", field.Name)
 		},
 	}
 	defer func() {
@@ -1436,6 +1482,71 @@ func (ec *executionContext) fieldContext_Query_search(ctx context.Context, field
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_search_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_pageResult(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_pageResult(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().PageResult(rctx, fc.Args["url"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.QueryResult)
+	fc.Result = res
+	return ec.marshalNQueryResult2ᚖgithubᚗcomᚋpsbernardoᚋgraphqlᚋgraphᚋmodelᚐQueryResult(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_pageResult(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "count":
+				return ec.fieldContext_QueryResult_count(ctx, field)
+			case "next":
+				return ec.fieldContext_QueryResult_next(ctx, field)
+			case "previous":
+				return ec.fieldContext_QueryResult_previous(ctx, field)
+			case "results":
+				return ec.fieldContext_QueryResult_results(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type QueryResult", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_pageResult_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -1512,9 +1623,9 @@ func (ec *executionContext) _Query_getSaveResult(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*model.People)
+	res := resTmp.(*model.QueryResult)
 	fc.Result = res
-	return ec.marshalNPeople2ᚕᚖgithubᚗcomᚋpsbernardoᚋgraphqlᚋgraphᚋmodelᚐPeople(ctx, field.Selections, res)
+	return ec.marshalNQueryResult2ᚖgithubᚗcomᚋpsbernardoᚋgraphqlᚋgraphᚋmodelᚐQueryResult(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_getSaveResult(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1525,34 +1636,16 @@ func (ec *executionContext) fieldContext_Query_getSaveResult(ctx context.Context
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "name":
-				return ec.fieldContext_People_name(ctx, field)
-			case "height":
-				return ec.fieldContext_People_height(ctx, field)
-			case "mass":
-				return ec.fieldContext_People_mass(ctx, field)
-			case "hairColor":
-				return ec.fieldContext_People_hairColor(ctx, field)
-			case "skinColor":
-				return ec.fieldContext_People_skinColor(ctx, field)
-			case "eyeColor":
-				return ec.fieldContext_People_eyeColor(ctx, field)
-			case "birthYear":
-				return ec.fieldContext_People_birthYear(ctx, field)
-			case "gender":
-				return ec.fieldContext_People_gender(ctx, field)
-			case "films":
-				return ec.fieldContext_People_films(ctx, field)
-			case "vehicles":
-				return ec.fieldContext_People_vehicles(ctx, field)
-			case "created":
-				return ec.fieldContext_People_created(ctx, field)
-			case "edited":
-				return ec.fieldContext_People_edited(ctx, field)
-			case "url":
-				return ec.fieldContext_People_url(ctx, field)
+			case "count":
+				return ec.fieldContext_QueryResult_count(ctx, field)
+			case "next":
+				return ec.fieldContext_QueryResult_next(ctx, field)
+			case "previous":
+				return ec.fieldContext_QueryResult_previous(ctx, field)
+			case "results":
+				return ec.fieldContext_QueryResult_results(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type People", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type QueryResult", field.Name)
 		},
 	}
 	defer func() {
@@ -1693,6 +1786,210 @@ func (ec *executionContext) fieldContext_Query___schema(ctx context.Context, fie
 				return ec.fieldContext___Schema_directives(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type __Schema", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _QueryResult_count(ctx context.Context, field graphql.CollectedField, obj *model.QueryResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_QueryResult_count(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Count, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_QueryResult_count(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "QueryResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _QueryResult_next(ctx context.Context, field graphql.CollectedField, obj *model.QueryResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_QueryResult_next(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Next, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_QueryResult_next(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "QueryResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _QueryResult_previous(ctx context.Context, field graphql.CollectedField, obj *model.QueryResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_QueryResult_previous(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Previous, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_QueryResult_previous(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "QueryResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _QueryResult_results(ctx context.Context, field graphql.CollectedField, obj *model.QueryResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_QueryResult_results(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Results, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.People)
+	fc.Result = res
+	return ec.marshalNPeople2ᚕᚖgithubᚗcomᚋpsbernardoᚋgraphqlᚋgraphᚋmodelᚐPeople(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_QueryResult_results(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "QueryResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_People_name(ctx, field)
+			case "height":
+				return ec.fieldContext_People_height(ctx, field)
+			case "mass":
+				return ec.fieldContext_People_mass(ctx, field)
+			case "hairColor":
+				return ec.fieldContext_People_hairColor(ctx, field)
+			case "skinColor":
+				return ec.fieldContext_People_skinColor(ctx, field)
+			case "eyeColor":
+				return ec.fieldContext_People_eyeColor(ctx, field)
+			case "birthYear":
+				return ec.fieldContext_People_birthYear(ctx, field)
+			case "gender":
+				return ec.fieldContext_People_gender(ctx, field)
+			case "films":
+				return ec.fieldContext_People_films(ctx, field)
+			case "vehicles":
+				return ec.fieldContext_People_vehicles(ctx, field)
+			case "created":
+				return ec.fieldContext_People_created(ctx, field)
+			case "edited":
+				return ec.fieldContext_People_edited(ctx, field)
+			case "url":
+				return ec.fieldContext_People_url(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type People", field.Name)
 		},
 	}
 	return fc, nil
@@ -3610,7 +3907,7 @@ func (ec *executionContext) unmarshalInputSearchResult(ctx context.Context, obj 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"key", "urls"}
+	fieldsInOrder := [...]string{"key"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -3624,13 +3921,6 @@ func (ec *executionContext) unmarshalInputSearchResult(ctx context.Context, obj 
 				return it, err
 			}
 			it.Key = data
-		case "urls":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("urls"))
-			data, err := ec.unmarshalNString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Urls = data
 		}
 	}
 
@@ -3851,6 +4141,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "pageResult":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_pageResult(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "getSearchHistory":
 			field := field
 
@@ -3903,6 +4215,60 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Query___schema(ctx, field)
 			})
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var queryResultImplementors = []string{"QueryResult"}
+
+func (ec *executionContext) _QueryResult(ctx context.Context, sel ast.SelectionSet, obj *model.QueryResult) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, queryResultImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("QueryResult")
+		case "count":
+			out.Values[i] = ec._QueryResult_count(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "next":
+			out.Values[i] = ec._QueryResult_next(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "previous":
+			out.Values[i] = ec._QueryResult_previous(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "results":
+			out.Values[i] = ec._QueryResult_results(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -4411,6 +4777,20 @@ func (ec *executionContext) marshalNPeople2ᚕᚖgithubᚗcomᚋpsbernardoᚋgra
 	wg.Wait()
 
 	return ret
+}
+
+func (ec *executionContext) marshalNQueryResult2githubᚗcomᚋpsbernardoᚋgraphqlᚋgraphᚋmodelᚐQueryResult(ctx context.Context, sel ast.SelectionSet, v model.QueryResult) graphql.Marshaler {
+	return ec._QueryResult(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNQueryResult2ᚖgithubᚗcomᚋpsbernardoᚋgraphqlᚋgraphᚋmodelᚐQueryResult(ctx context.Context, sel ast.SelectionSet, v *model.QueryResult) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._QueryResult(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNSearchResult2githubᚗcomᚋpsbernardoᚋgraphqlᚋgraphᚋmodelᚐSearchResult(ctx context.Context, v interface{}) (model.SearchResult, error) {

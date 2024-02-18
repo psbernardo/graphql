@@ -32,9 +32,15 @@ type People struct {
 type Query struct {
 }
 
+type QueryResult struct {
+	Count    int       `json:"count"`
+	Next     string    `json:"next"`
+	Previous string    `json:"previous"`
+	Results  []*People `json:"results"`
+}
+
 type SearchResult struct {
-	Key  string   `json:"key"`
-	Urls []string `json:"urls"`
+	Key string `json:"key"`
 }
 
 type Vehicle struct {

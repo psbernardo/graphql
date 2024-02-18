@@ -6,29 +6,42 @@ package graph
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/psbernardo/graphql/graph/model"
 )
 
 // SaveSearchResult is the resolver for the saveSearchResult field.
 func (r *mutationResolver) SaveSearchResult(ctx context.Context, input model.SearchResult) (*model.SaveResultResponse, error) {
-	panic(fmt.Errorf("not implemented: SaveSearchResult - saveSearchResult"))
+	queryResult, err := r.apiService.Search(ctx, input.Key)
+	if err != nil {
+		return nil, err
+	}
+	if err := r.repository.SaveSearchResult(ctx, input.Key, queryResult); err != nil {
+		return nil, err
+	}
+	return &model.SaveResultResponse{
+		Message: "Record Successfully saved",
+	}, nil
 }
 
 // Search is the resolver for the search field.
-func (r *queryResolver) Search(ctx context.Context, filter string) ([]*model.People, error) {
-	panic(fmt.Errorf("not implemented: Search - search"))
+func (r *queryResolver) Search(ctx context.Context, filter string) (*model.QueryResult, error) {
+	return r.apiService.Search(ctx, filter)
+}
+
+// PageResult is the resolver for the pageResult field.
+func (r *queryResolver) PageResult(ctx context.Context, url string) (*model.QueryResult, error) {
+	return r.apiService.PageResult(ctx, url)
 }
 
 // GetSearchHistory is the resolver for the getSearchHistory field.
 func (r *queryResolver) GetSearchHistory(ctx context.Context) ([]string, error) {
-	panic(fmt.Errorf("not implemented: GetSearchHistory - getSearchHistory"))
+	return r.repository.GetSearchHistoryKey(ctx)
 }
 
 // GetSaveResult is the resolver for the getSaveResult field.
-func (r *queryResolver) GetSaveResult(ctx context.Context, key string) ([]*model.People, error) {
-	panic(fmt.Errorf("not implemented: GetSaveResult - getSaveResult"))
+func (r *queryResolver) GetSaveResult(ctx context.Context, key string) (*model.QueryResult, error) {
+	return r.repository.GetSaveResult(ctx, key)
 }
 
 // Mutation returns MutationResolver implementation.

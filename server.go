@@ -7,7 +7,9 @@ import (
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/psbernardo/graphql/database"
 	"github.com/psbernardo/graphql/graph"
+	"github.com/psbernardo/graphql/thirdpartyservice/swapi"
 )
 
 const defaultPort = "8080"
@@ -18,7 +20,14 @@ func main() {
 		port = defaultPort
 	}
 
-	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{}}))
+	DB := database.Initialization()
+
+	repository := database.NewRepository(DB)
+
+	apiClient := swapi.NewClient()
+	resolver := graph.NewResolver(apiClient, repository)
+
+	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: resolver}))
 
 	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
 	http.Handle("/query", srv)

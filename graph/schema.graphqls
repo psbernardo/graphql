@@ -31,10 +31,18 @@ type People {
   url: String!
 }
 
+type QueryResult {
+  count: Int!
+  next: String!
+  previous: String!
+  results: [People]!
+}
+
 type Query {
-  search(filter: String!): [People]!
+  search(filter: String!): QueryResult!
+  pageResult(url: String!): QueryResult!
   getSearchHistory: [String!]!
-  getSaveResult(key: String!): [People]!
+  getSaveResult(key: String!): QueryResult!
 }
 
 type Mutation {
@@ -43,7 +51,6 @@ type Mutation {
 
 input SearchResult {
   key: String!
-  urls: [String!]!
 }
 
 type saveResultResponse {
